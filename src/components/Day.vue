@@ -6,6 +6,7 @@
         type="date"
         placeholder="select date"
         default-value="2018-03-01"
+        ref="datePicker"
         :picker-options="pickerOptions1">
       </el-date-picker>
       <span>{{value2}}</span><br>
@@ -93,6 +94,9 @@ export default {
       this.new_days = value.toISOString().substring(0, 10);
       this.get_time();
     }
+  },
+  mounted(){
+    this.$refs.datePicker.focus()
   }
 }
 </script>
