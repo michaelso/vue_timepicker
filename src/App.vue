@@ -10,7 +10,7 @@
       <span>store_id: {{store_id}}</span><br>
     </div>
     <Day :fb_id="fb_id" :store_id="store_id" :input_dates="day_values" :dates_dict="day_dict" v-on:time_dict="handle_time"></Day>
-    <Time v-if="time_display" :options_time="option2"></Time>
+    <Time :options="option2" v-model="selectedTime"></Time>
   </div>
 </template>
 
@@ -37,7 +37,14 @@ export default {
        return_value: '9',
        day_values: [],
        day_dict: {},
-       option2: [],
+       option2: [{
+         value: '11:00',
+         label: '11:00'
+       },{
+         value: '19:00',
+         label: '19:00'
+       }],
+       selectedTime: null,
        time_display: false
      }
   },
