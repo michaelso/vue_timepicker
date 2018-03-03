@@ -6,11 +6,11 @@
     <!--</div>-->
     <div class="">
       <!--<router-view></router-view>-->
-      <span>fb_id: {{fb_id}}</span><br>
-      <span>store_id: {{store_id}}</span><br>
+      <!--<span>fb_id: {{fb_id}}</span><br>-->
+      <!--<span>store_id: {{store_id}}</span><br>-->
     </div>
-    <Day :fb_id="fb_id" :store_id="store_id" :input_dates="day_values" :dates_dict="day_dict" v-on:time_dict="handle_time"></Day>
-    <Time :options="option2" v-model="selectedTime"></Time>
+    <Day :dates_dict="dates_dict" v-on:picked_date="handle_picked_date"></Day>
+    <Time v-if="time_display" :options="time_dict" v-model="selectedTime"></Time>
   </div>
 </template>
 
@@ -29,15 +29,16 @@ export default {
   props: {
 
   },
-  data() {
+  data: function() {
      return{
-       query: this.$route.query,
        fb_id: this.$route.query.fb_id,
        store_id: this.$route.query.store_id,
-       return_value: '9',
-       day_values: [],
-       day_dict: {},
-       option2: [{
+
+       dates_dict: {},
+       picked_date: '',
+
+       available_time: {},
+       time_dict: [{
          value: '11:00',
          label: '11:00'
        },{
@@ -48,59 +49,87 @@ export default {
        time_display: false
      }
   },
+  computed: {
+    day_id_dict: function () {
+      const ret = {};
+      for(let key in this.dates_dict){
+        ret[this.dates_dict[key]] = key;
+      }
+      return ret
+    },
+
+    date_id: function () {
+      return this.day_id_dict[this.picked_date];
+    }
+  },
+  watch : {
+    selectedTime: function (value, old_value) {
+      console.log('selectedTime');
+      console.log(this.available_time[value]);
+      console.log(value);
+    }
+  },
   methods: {
-    handle_time: function (payload) {
-      console.log(payload)
-      const keys = Object.keys(payload);
-      const time_values = keys.map(function(v) { return payload[v]; });
-      console.log(keys);
-      console.log(time_values);
-      let option2 = [];
-      for (const [key, value] of Object.entries(payload)) {
-        option2.push({
+    handle_picked_date: async function (payload) {
+      console.log('handle_picked_date');
+      console.log(payload);
+      this.picked_date = payload;
+
+      const myJson = await this.get_cms('get_times')
+      const available_time = myJson['data'];
+      console.log('available_time');
+      console.log(available_time);
+      this.available_time = available_time;
+      let time_dict = [];
+      for (const [key, value] of Object.entries(available_time)) {
+        time_dict.push({
           value: key,
           label: value
         });
         console.log(key, value);
       }
-      console.log(option2);
-      this.option2 = option2;
+      console.log(time_dict);
+      this.time_dict = time_dict;
       this.time_display = true;
+
     },
 
-    get_days() {
-      const local_this = this;
-      fetch('http://ysl.dtwdigital.com.hk/demobooking/api?apikey=8h7dgbv865ubt9jajbv7&action=get_dates&store_id=' + this.store_id,
-        {
-          mode: 'cors',
-          headers: {
-            'Access-Control-Allow-Origin': '*'
-          },
-        })
-        .then(function (response) {
-          console.log("fetch callback");
-          return response.json();
-        })
-        .then(function (myJson) {
+    get_cms: async function (action) {
+      // const host = 'https://ysl.dtwdigital.com.hk/demobooking/api?apikey=8h7dgbv865ubt9jajbv7';
+      // let url = host + '&action=' + action + '&store_id=' + this.store_id;
 
-          const days = myJson['data'];
-          const keys = Object.keys(days);
-          local_this.day_values = keys.map(function(v) { return days[v]; });
-          console.log(keys);
-          console.log(local_this.day_values);
+      const host = 'https://us-central1-ysl-hand-massage-booking-2018.cloudfunctions.net/request_cms';
+      let url = host + '?action=' + action + '&store_id=' + this.store_id;
 
-          local_this.day_dict = days;
+      if(action === 'get_times'){
+        const date_id = this.day_id_dict[this.picked_date];
+        url = url + '&date_id=' + date_id;
+      }
+      console.log(url);
+      try{
+        // await response of fetch call
+        console.log('before await fetch()');
+        let response = await fetch(url);
+        // only proceed once promise is resolved
+        let data = await response.json();
+        // only proceed once second promise is resolved
+        console.log(data);
+        return data;
+      }catch (e) {
+        console.error('fetch error:', e.message);
+      }
+    },
 
-        }).catch(function (error) {
-          return error.response.json();
-        }).then(function (errorData) {
-          // errorData 裡面才是實際的 JSON 資料
-          console.log("fetch error");
-        });
-    }
   },
-  mounted: function () {
-   this.get_days()
+  mounted: async function () {
+    const myJson = await this.get_cms('get_dates')
+    const days = myJson['data'];
+    const keys = Object.keys(days);
+    const day_values = keys.map(v => days[v]);
+    // console.log(keys);
+    // console.log(this.day_values);
+
+    this.dates_dict = days;
   }
 
 }
